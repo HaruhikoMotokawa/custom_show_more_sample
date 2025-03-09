@@ -5,6 +5,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 ///
 /// このWidgetは、ラップしたWidgetの高さが指定した高さを超えた場合に
 /// 折りたたみ表示を行います。
+///
+/// INFO: 画像関連のWidgetには未対応です。
 class ExpandableShowMore extends HookWidget {
   const ExpandableShowMore({
     required this.child,
