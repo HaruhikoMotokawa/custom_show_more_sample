@@ -1,20 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
+/// ラップしたWidgetを折りたたみ表示するWidget
+///
+/// このWidgetは、ラップしたWidgetの高さが指定した高さを超えた場合に
+/// 折りたたみ表示を行います。
 class ExpandableShowMore extends HookWidget {
   const ExpandableShowMore({
     required this.child,
     this.scrollController,
-    super.key,
     this.collapsedHeight = 300.0,
     this.mainAxisAlignment = MainAxisAlignment.start,
     this.crossAxisAlignment = CrossAxisAlignment.center,
+    super.key,
   });
 
+  /// 折りたたむ高さの基準
+  ///
+  /// デフォルトは300.0
   final double collapsedHeight;
+
+  /// ラップするWidget
   final Widget child;
+
+  /// 縦の配置
   final MainAxisAlignment mainAxisAlignment;
+
+  /// 横の配置
   final CrossAxisAlignment crossAxisAlignment;
+
+  /// スクロール位置を制御するためのコントローラ
+  ///
+  /// 呼び出し側のスクロール位置を制御するために使用
   final ScrollController? scrollController;
 
   @override
@@ -47,12 +64,6 @@ class ExpandableShowMore extends HookWidget {
       [child],
     );
 
-    /// このchildの高さを条件によって変更する
-    final height = switch ((shouldExpandable.value, isExpanded.value)) {
-      (false, _) => null,
-      (true, true) => collapsedHeight,
-      (true, false) => null,
-    };
     return Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: mainAxisAlignment,
@@ -66,16 +77,22 @@ class ExpandableShowMore extends HookWidget {
             alignment: AlignmentDirectional.bottomCenter,
             curve: Curves.easeInOut,
             child: SizedBox(
-              height: height,
+              // 折りたたみが必要 かつ 折りたたみ状態の場合は高さを制限
+              height: (shouldExpandable.value && isExpanded.value)
+                  ? collapsedHeight
+                  : null,
               child: Stack(
                 children: [
                   // 主にHtmlWidgetなどのColumn要素を内包するWidgetの
-                  // オーバーフローを制御するために使用SingleChildScrollViewでラップ
+                  // オーバーフローを制御するためにSingleChildScrollViewでラップ
                   SingleChildScrollView(
+                    // このキーを指定されている要素の高さを取得するために使用
                     key: contentKey,
                     physics: const NeverScrollableScrollPhysics(),
+                    // ここにラップ対象のWidgetが入る
                     child: child,
                   ),
+                  // 折りたたみが必要 かつ 折りたたみ状態の場合はグラデーションを表示
                   if (shouldExpandable.value && isExpanded.value)
                     const _GradientMask(),
                 ],
@@ -83,6 +100,7 @@ class ExpandableShowMore extends HookWidget {
             ),
           ),
         ),
+        // 折りたたみが必要の場合はボタンを表示
         if (shouldExpandable.value)
           Align(
             alignment: Alignment.centerRight,
@@ -96,6 +114,7 @@ class ExpandableShowMore extends HookWidget {
   }
 }
 
+/// 折りたたまれている場合に要素のタブにグラデーションをかける
 class _GradientMask extends StatelessWidget {
   const _GradientMask();
 
@@ -125,26 +144,31 @@ class _GradientMask extends StatelessWidget {
 }
 
 extension on ExpandableShowMore {
+  /// 'もっと見る' または '閉じる' ボタンの処理
   void onButtonPressed(
     GlobalKey contentKey,
     ValueNotifier<bool> isExpanded,
   ) {
     isExpanded.value = !isExpanded.value;
 
-    // クリック時に現在のスクロール位置を保存
     if (scrollController != null && isExpanded.value) {
+      // キーを指定されている要素（ExpandableShowMoreの子）のレンダーオブジェクトを取得
       final objectBox =
           contentKey.currentContext?.findRenderObject() as RenderBox?;
 
       if (objectBox != null) {
+        // `objectBox` の現在のスクリーン座標（`Offset.zero` は左上の座標）を取得
+        // `ancestor` にはスクロールビューのコンテキストを指定し、相対位置を計算する
         final offset = objectBox.localToGlobal(
           Offset.zero,
           ancestor: scrollController!.position.context.storageContext
               .findRenderObject(),
         );
-        // 画面上端に `child` の上端を揃える
+        // `offset.dy` を加算して、スクロール位置を調整
+        // `scrollController!.offset` は現在のスクロール位置
+        // `offset.dy` は `objectBox` の現在のスクリーン上のY座標（= スクロール位置から見た要素の位置）
         final targetScrollOffset = scrollController!.offset + offset.dy;
-
+        // 目標のスクロール位置へアニメーションで移動
         scrollController!.animateTo(
           targetScrollOffset,
           duration: const Duration(milliseconds: 300),
