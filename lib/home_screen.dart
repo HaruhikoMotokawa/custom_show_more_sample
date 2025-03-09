@@ -1,5 +1,6 @@
 import 'package:custom_show_more_sample/expandable_show_more.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:gap/gap.dart';
 
@@ -29,11 +30,20 @@ class HomeScreen extends StatelessWidget {
                 child: const Text('お気に入り作品集に登録だぞ'),
               ),
               const Gap(16),
-              const ExpandableShowMore(
+              ExpandableShowMore(
                 child: SingleChildScrollView(
-                  physics: NeverScrollableScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   child: HtmlWidget(
                     onePieceHtml,
+                    onTapUrl: (url) async {
+                      // urlをコピーする
+                      await Clipboard.setData(ClipboardData(text: url));
+                      if (!context.mounted) return false;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('URLをコピーしました: $url')),
+                      );
+                      return true;
+                    },
                   ),
                 ),
               ),
@@ -70,6 +80,12 @@ const onePieceHtml = '''
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
+    <iframe width="560" height="315" 
+        src="https://www.youtube.com/embed/b_sQ9bMltGU" 
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowfullscreen>
+    </iframe>
     <div>
         <h1>ワンピース登場キャラクター</h1>
         <div>
@@ -126,6 +142,11 @@ const onePieceHtml = '''
             <p><strong>ストーリー:</strong> 元はルンバー海賊団の音楽家だったが、クルーを失い、一人さまよっていた。スリラーバークでルフィたちと出会い、仲間に加わる。ラブーンとの再会を目指しながら旅を続けている。</p>
         </div>
     </div>
+<p>
+    <a href="https://one-piece.com/" target="_blank" rel="noopener noreferrer">
+        ワンピース公式サイトはこちら
+    </a>
+</p>
 </body>
 </html>
 ''';
