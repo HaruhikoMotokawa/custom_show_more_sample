@@ -22,7 +22,6 @@ class HomeScreen extends HookWidget {
             padding: const EdgeInsets.all(16),
             children: [
               ExpandableShowMore(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 scrollController: scrollController,
                 child: Text(
                   'One Piece',

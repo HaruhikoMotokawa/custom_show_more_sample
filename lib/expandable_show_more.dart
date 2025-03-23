@@ -12,8 +12,6 @@ class ExpandableShowMore extends HookWidget {
     required this.child,
     this.scrollController,
     this.collapsedHeight = 300.0,
-    this.mainAxisAlignment = MainAxisAlignment.start,
-    this.crossAxisAlignment = CrossAxisAlignment.center,
     super.key,
   });
 
@@ -24,12 +22,6 @@ class ExpandableShowMore extends HookWidget {
 
   /// ラップするWidget
   final Widget child;
-
-  /// 縦の配置
-  final MainAxisAlignment mainAxisAlignment;
-
-  /// 横の配置
-  final CrossAxisAlignment crossAxisAlignment;
 
   /// スクロール位置を制御するためのコントローラ
   ///
@@ -45,10 +37,10 @@ class ExpandableShowMore extends HookWidget {
     final contentKey = useMemoized(GlobalKey.new);
 
     /// 折りたたみが必要かどうか
-    final shouldExpandable = useState(true);
+    final shouldCollapse = useState(true);
 
-    /// 折りたたみ状態
-    final isExpanded = useState(true);
+    /// 展開している状態かどうか
+    final isExpanded = useState(false);
 
     useEffect(
       () {
@@ -57,19 +49,17 @@ class ExpandableShowMore extends HookWidget {
               contentKey.currentContext?.findRenderObject() as RenderBox?;
           // 要素の高さが折りたたみ基準の高さより小さい場合は折りたたみ不要
           if (box != null && box.size.height < collapsedHeight) {
-            shouldExpandable.value = false;
-            isExpanded.value = false;
+            shouldCollapse.value = false;
           }
         });
         return null;
       },
-      [child],
+      [],
     );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: mainAxisAlignment,
-      crossAxisAlignment: crossAxisAlignment,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 画面を閉じた場合に親のAnimatedSizeの高さが正確に反映されない問題を解決するため
         // にIntrinsicHeightを使用
@@ -80,7 +70,7 @@ class ExpandableShowMore extends HookWidget {
             curve: Curves.easeInOut,
             child: SizedBox(
               // 折りたたみが必要 かつ 折りたたみ状態の場合は高さを制限
-              height: (shouldExpandable.value && isExpanded.value)
+              height: (shouldCollapse.value && isExpanded.value == false)
                   ? collapsedHeight
                   : null,
               child: Stack(
@@ -95,7 +85,7 @@ class ExpandableShowMore extends HookWidget {
                     child: child,
                   ),
                   // 折りたたみが必要 かつ 折りたたみ状態の場合はグラデーションを表示
-                  if (shouldExpandable.value && isExpanded.value)
+                  if (shouldCollapse.value && isExpanded.value == false)
                     const _GradientMask(),
                 ],
               ),
@@ -103,12 +93,12 @@ class ExpandableShowMore extends HookWidget {
           ),
         ),
         // 折りたたみが必要の場合はボタンを表示
-        if (shouldExpandable.value)
+        if (shouldCollapse.value)
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () => onButtonPressed(contentKey, isExpanded),
-              child: Text(isExpanded.value ? 'もっと見る' : '閉じる'),
+              child: Text(isExpanded.value ? '閉じる' : 'もっと見る'),
             ),
           ),
       ],
@@ -153,7 +143,8 @@ extension on ExpandableShowMore {
   ) {
     isExpanded.value = !isExpanded.value;
 
-    if (scrollController != null && isExpanded.value) {
+    // コントローラーを渡されている　かつ　折りたたみ状態になった場合
+    if (scrollController != null && isExpanded.value == false) {
       // キーを指定されている要素（ExpandableShowMoreの子）のレンダーオブジェクトを取得
       final objectBox =
           contentKey.currentContext?.findRenderObject() as RenderBox?;
